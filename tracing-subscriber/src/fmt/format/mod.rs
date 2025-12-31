@@ -48,9 +48,6 @@ use tracing_log::NormalizeEvent;
 #[cfg(feature = "ansi")]
 use nu_ansi_term::{Color, Style};
 
-mod escape;
-use escape::Escape;
-
 #[cfg(feature = "json")]
 mod json;
 #[cfg(feature = "json")]
@@ -1263,7 +1260,7 @@ impl field::Visit for DefaultVisitor<'_> {
                 field,
                 &format_args!(
                     "{} {}{}{}{}",
-                    Escape(&format_args!("{}", value)),
+                    value,
                     italic.paint(field.name()),
                     italic.paint(".sources"),
                     self.writer.dimmed().paint("="),
@@ -1271,10 +1268,7 @@ impl field::Visit for DefaultVisitor<'_> {
                 ),
             )
         } else {
-            self.record_debug(
-                field,
-                &format_args!("{}", Escape(&format_args!("{}", value))),
-            )
+            self.record_debug(field, &format_args!("{}", value))
         }
     }
 
@@ -1296,10 +1290,7 @@ impl field::Visit for DefaultVisitor<'_> {
         self.maybe_pad();
 
         self.result = match name {
-            "message" => {
-                // Escape ANSI characters to prevent malicious patterns (e.g., terminal injection attacks)
-                write!(self.writer, "{:?}", Escape(value))
-            }
+            "message" => write!(self.writer, "{:?}", value),
             name if name.starts_with("r#") => write!(
                 self.writer,
                 "{}{}{:?}",
@@ -1338,7 +1329,7 @@ impl Display for ErrorSourceList<'_> {
         let mut list = f.debug_list();
         let mut curr = Some(self.0);
         while let Some(curr_err) = curr {
-            list.entry(&Escape(&format_args!("{}", curr_err)));
+            list.entry(&format_args!("{}", curr_err));
             curr = curr_err.source();
         }
         list.finish()
